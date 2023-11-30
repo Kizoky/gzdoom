@@ -363,6 +363,9 @@ void FCajunMaster::TryAddBot (FLevelLocals *Level, uint8_t **stream, int player)
 	delete[] info;
 }
 
+// [Kizoky] Add support for adding custom Bot classes
+EXTERN_CVAR(String, botclass);
+
 bool FCajunMaster::DoAddBot (FLevelLocals *Level, uint8_t *info, botskill_t skill)
 {
 	int bnum;
@@ -381,10 +384,20 @@ bool FCajunMaster::DoAddBot (FLevelLocals *Level, uint8_t *info, botskill_t skil
 		return false;
 	}
 
+	// [Kizoky] Check if the class exists one more time...
+	PClass* pBotclass = PClass::FindClass((const char*)botclass);
+	if (pBotclass == NULL)
+	{
+		return false;
+	}
+
 	D_ReadUserInfoStrings (bnum, &info, false);
 
 	multiplayer = true; //Prevents cheating and so on; emulates real netgame (almost).
 	players[bnum].Bot = Level->CreateThinker<DBot>();
+	// [Kizoky] Set the class of the bot
+	players[bnum].Bot->SetClass(pBotclass);
+
 	players[bnum].Bot->player = &players[bnum];
 	players[bnum].Bot->skill = skill;
 	playeringame[bnum] = true;

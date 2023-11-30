@@ -213,9 +213,9 @@ public:
 
 	DVector2	old;
 
-private:
 	//(b_think.cpp)
-	void Think ();
+	virtual void Think(); // [Kizoky] Exposed Think to ZScript
+private:
 	void ThinkForMove (ticcmd_t *cmd);
 	void Set_enemy ();
 

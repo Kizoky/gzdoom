@@ -62,9 +62,30 @@ IMPLEMENT_POINTERS_START(DBot)
 	IMPLEMENT_POINTER(missile)
 	IMPLEMENT_POINTER(mate)
 	IMPLEMENT_POINTER(last_mate)
+	IMPLEMENT_POINTER(player)	// [Kizoky] implement the player pointer
+	IMPLEMENT_POINTER(skill)	// [Kizoky] expose Bot skill
 IMPLEMENT_POINTERS_END
 
 DEFINE_FIELD(DBot, dest)
+DEFINE_FIELD(DBot, player)	// [Kizoky] implement the player pointer
+DEFINE_FIELD(DBot, skill)	// [Kizoky] expose Bot skill
+
+// TODO: Port these over to ZScript
+DEFINE_FIELD(DBot, prev)
+DEFINE_FIELD(DBot, enemy)
+DEFINE_FIELD(DBot, missile)
+DEFINE_FIELD(DBot, mate)
+DEFINE_FIELD(DBot, last_mate)
+
+// TODO: do we need this?
+DEFINE_FIELD_X(BotInfoData, BotInfoData, MoveCombatDist)
+DEFINE_FIELD_X(BotInfoData, BotInfoData, flags)
+DEFINE_FIELD_X(BotInfoData, BotInfoData, projectileType)
+
+DEFINE_FIELD_X(BotSkillData, botskill_t, aiming)
+DEFINE_FIELD_X(BotSkillData, botskill_t, perfection)
+DEFINE_FIELD_X(BotSkillData, botskill_t, reaction)
+DEFINE_FIELD_X(BotSkillData, botskill_t, isp)
 
 void DBot::Construct()
 {
@@ -147,12 +168,47 @@ void DBot::Tick ()
 
 	BotThinkCycles.Clock();
 	Level->BotInfo.m_Thinking = true;
-	Think ();
+
+	// [Kizoky] Exposed Think to ZScript
+	IFVIRTUAL(DBot, Think)
+	{
+		// Without the type cast this picks the 'void *' assignment...
+		VMValue params[1] = { (DBot*)this };
+		VMCall(func, params, 1, nullptr, 0);
+	}
+
 	Level->BotInfo.m_Thinking = false;
 	BotThinkCycles.Unclock();
 }
 
+// [Kizoky] Exposed Think to ZScript
+DEFINE_ACTION_FUNCTION(DBot, Think)
+{
+	PARAM_SELF_PROLOGUE(DBot);
+	self->Think();
+	return 0;
+}
+
+// [Kizoky] Exposed the Bot info struct to ZScript
+DEFINE_ACTION_FUNCTION(DBot, GetBotInfo)
+{
+	PARAM_SELF_PROLOGUE(DBot);
+	PARAM_POINTER(weap, AActor);
+
+	BotInfoData* dummy = nullptr;
+
+	// TODO: Check if this is absolutely okay
+	auto k = BotInfo.CheckKey(weap->GetClass()->TypeName);
+	if (k)
+		ACTION_RETURN_POINTER(k);
+
+	ACTION_RETURN_POINTER(dummy);
+}
+
 CVAR (Int, bot_next_color, 11, 0)
+
+// [Kizoky] the default ZScript class of the Bots
+CVAR (String, botclass, "ZSCajunBot", 0)
 
 CCMD (addbot)
 {
@@ -168,9 +224,17 @@ CCMD (addbot)
 		return;
 	}
 
+	// [Kizoky] Check if the bot class is valid
+	DBot* custombotclass = (DBot*)(PClass::FindClass(botclass));
+	if (custombotclass == nullptr)
+	{
+		Printf("Couldn't find bot class '%s'!\n", (const char*)botclass);
+		return;
+	}
+
 	if (argv.argc() > 2)
 	{
-		Printf ("addbot [botname] : add a bot to the game\n");
+		Printf("addbot [botname] : add a bot to the game\n");
 		return;
 	}
 
