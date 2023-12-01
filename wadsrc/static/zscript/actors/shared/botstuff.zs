@@ -42,7 +42,6 @@ struct BotSkillData native
 class Bot native
 {
 	native PlayerInfo player;
-	native BotSkillData skill;
 
 	// ---------- TODO: Port these over to ZScript, and remove them from C++
 	native Actor dest;
@@ -56,7 +55,10 @@ class Bot native
 	const BIF_BOT_REACTION_SKILL_THING = 1;
 	const BIF_BOT_EXPLOSIVE = 2;
 	const BIF_BOT_BFG = 4;
-	native BotInfoData GetBotInfo();
+	native static BotInfoData GetBotInfo(Actor weap);
+	native BotSkillData GetBotSkill();
+
+	native void BotButton(int btn);
 
 	virtual native void Think();
 }
@@ -74,8 +76,8 @@ class ZSCajunBot : Bot
 		// [Kizoky] Search through Bot thinkers...
 		ThinkerIterator it = ThinkerIterator.Create("Bot");
 		Bot zbot;
-        while ( zbot = Bot(it.Next()) )
-        {
+		while ( zbot = Bot(it.Next()) )
+		{
 			let zsbot = ZSCajunBot(zbot);
 			if (!zsbot)
 				continue;
@@ -99,8 +101,8 @@ class ZSCajunBot : Bot
 		}
 		else if (!deathmatch && player && Whom.player)
 		{
-			// TODO: wtf is this supposed to do?
-			return true; /*(!((flags ^ other->flags) & MF_FRIENDLY));*/
+			// [Kizoky] many thanks for Boondorl
+			return !(player.mo.bFRIENDLY ^ Whom.bFRIENDLY);
 		}
 		/*
 		else if (teamplay)
@@ -147,6 +149,14 @@ class ZSCajunBot : Bot
 		{
 			let plr = Players[count].mo;
 			if (!plr)
+				continue;
+
+			// [Kizoky] bots shouldn't target themselves
+			if (plr == botself)
+				continue;
+
+			// [Kizoky] bots shouldn't follow other bots
+			if (plr.player.Bot)
 				continue;
 
 			if (IsTeammate(plr) && 
@@ -270,13 +280,37 @@ class ZSCajunBot : Bot
 		if (vangle == 0)
 			return false; //Looker seems to be blind.
 	
-		return absangle(player->mo->AngleTo(to), player->mo->Angles.Yaw) <= (vangle/2);
+		// player.mo.Angles.Yaw
+		return player.mo.AbsAngle(player.mo.AngleTo(to), player.mo.angle) <= (vangle/2);
 	}
 
-	// [Kizoky] Temp code to cope with the weapon flags and as such
-	int GetBotWeaponInfo(Actor wep)
+	// [Kizoky] Ported FCajunMaster::SetBodyAt
+	Actor body1;
+	Actor body2;
+	void SetBodyAt(Vector3 pos, int hostnum)
 	{
-		
+		if (hostnum == 1)
+		{
+			if (body1)
+			{
+				body1.SetOrigin(pos, false);
+			}
+			else
+			{
+				body1 = player.mo.Spawn("CajunBodyNode", pos, NO_REPLACE);
+			}
+		}
+		else if (hostnum == 2)
+		{
+			if (body2)
+			{
+				body2.SetOrigin (pos, false);
+			}
+			else
+			{
+				body2 = player.mo.Spawn("CajunBodyNode", pos, NO_REPLACE);
+			}
+		}
 	}
 
 	//-------------------------------------
@@ -285,6 +319,9 @@ class ZSCajunBot : Bot
 	//The bot will check if it's time to fire
 	//and do so if that is the case.
 	int t_react;
+	bool first_shot;
+	Const WHATS_DARK = 50; //light value thats classed as dark.
+	bool increase;
 	void Dofire ()
 	{
 		bool no_fire; //used to prevent bot from pumping rockets into nearby walls.
@@ -301,7 +338,7 @@ class ZSCajunBot : Bot
 		if (botplayer.ReadyWeapon == NULL)
 			return;
 	
-		if (botplayer.damagecount > (unsigned)skill.isp)
+		if (botplayer.damagecount > GetBotSkill().isp)
 		{
 			first_shot = true;
 			return;
@@ -311,7 +348,7 @@ class ZSCajunBot : Bot
 		if (first_shot &&
 			!(GetBotInfo(botplayer.ReadyWeapon).flags & BIF_BOT_REACTION_SKILL_THING))
 		{
-			t_react = (100-skill.reaction+1)/((pr_botdofire()%3)+3);
+			t_react = (100-GetBotSkill().reaction+1)/((random[pr_botdofire]()%3)+3);
 		}
 		first_shot = false;
 		if (t_react)
@@ -321,7 +358,7 @@ class ZSCajunBot : Bot
 	
 		no_fire = true;
 		//Distance to enemy.
-		Dist = botself.Distance2D(enemy, botself.Vel.X - enemy.Vel.X, botself.Vel.Y - enemy.Vel.Y);
+		Dist = botself.Distance2D(enemy/*, botself.Vel.X - enemy.Vel.X, botself.Vel.Y - enemy.Vel.Y*/);
 	
 		//FIRE EACH TYPE OF WEAPON DIFFERENT: Here should all the different weapons go.
 		if (GetBotInfo(botplayer.ReadyWeapon).MoveCombatDist == 0)
@@ -332,7 +369,7 @@ class ZSCajunBot : Bot
 		else if (GetBotInfo(botplayer.ReadyWeapon).flags & BIF_BOT_BFG)
 		{
 			//MAKEME: This should be smarter.
-			if ((pr_botdofire()%200)<=skill.reaction)
+			if ((random[pr_botdofire]()%200)<=GetBotSkill().reaction)
 				if(Check_LOS(enemy, BAM(SHOOTFOV)))
 					no_fire = false;
 		}
@@ -341,45 +378,51 @@ class ZSCajunBot : Bot
 			if (GetBotInfo(botplayer.ReadyWeapon).flags & BIF_BOT_EXPLOSIVE)
 			{
 				//Special rules for RL
+				/*
 				an = FireRox (enemy, cmd);
 				if(an != 0)
 				{
 					botself.Angle = an;
 					//have to be somewhat precise. to avoid suicide.
-					if (absangle(an, botself.Angles.Yaw) < BAM(12.))
+					if (absangle(an, player.mo.angle) < BAM(12.))
 					{
 						t_rocket = 9;
 						no_fire = false;
 					}
 				}
+				*/
 			}
 			// prediction aiming
 			Dist = botself.Distance2D(enemy);
-			fm = Dist / GetDefaultByType (GetBotInfo(botplayer.ReadyWeapon).projectileType)->Speed;
-			Level->BotInfo.SetBodyAt(Level, enemy.pos + enemy.Vel.XY() * fm * 2, 1);
-			Angle = botself.AngleTo(Level->BotInfo.body1);
+			let proj = GetBotInfo(botplayer.ReadyWeapon).projectileType;
+			int projspeed = GetDefaultByType(proj.GetClass()).Speed;
+			fm = Dist / projspeed;
+
+			SetBodyAt(enemy.pos + enemy.Vel.XY * fm * 2, 1);
+			player.mo.Angle = botself.AngleTo(body1);
+
 			if (Check_LOS (enemy, BAM(SHOOTFOV)))
 				no_fire = false;
 		}
 		else
 		{
 			//Other weapons, mostly instant hit stuff.
-			Angle = botself.AngleTo(enemy);
+			player.mo.Angle = botself.AngleTo(enemy);
 			aiming_penalty = 0;
 			if (enemy.bSHADOW)
-				aiming_penalty += (pr_botdofire()%25)+10;
-			if (enemy->Sector->lightlevel<WHATS_DARK/* && !(player->powers & PW_INFRARED)*/)
-				aiming_penalty += pr_botdofire()%40;//Dark
+				aiming_penalty += (random[pr_botdofire]()%25)+10;
+			if (enemy.cursector.GetLightLevel()<WHATS_DARK/* && !(player->powers & PW_INFRARED)*/)
+				aiming_penalty += random[pr_botdofire]()%40;//Dark
 			if (botplayer.damagecount)
 				aiming_penalty += botplayer.damagecount; //Blood in face makes it hard to aim
-			aiming_value = skill.aiming - aiming_penalty;
+			aiming_value = GetBotSkill().aiming - aiming_penalty;
 			if (aiming_value <= 0)
 				aiming_value = 1;
 			m = BAM(((SHOOTFOV/2)-(aiming_value*SHOOTFOV/200))); //Higher skill is more accurate
 			if (m <= 0)
 				m = BAM(1.); //Prevents lock.
 	
-			if (m != nullAngle)
+			if (m != 0) // [Kizoky] nullAngle
 			{
 				if (increase)
 					botself.Angle += m;
@@ -387,7 +430,7 @@ class ZSCajunBot : Bot
 					botself.Angle -= m;
 			}
 	
-			if (absangle(Angle, botself.Angles.Yaw) < BAM(4.))
+			if (player.mo.AbsAngle(player.mo.Angle, player.cmd.yaw) < BAM(4.))
 			{
 				increase = !increase;
 			}
@@ -403,11 +446,25 @@ class ZSCajunBot : Bot
 	}
 
 	// [Kizoky] defines for the movement code
-	const float SHOOTFOV = 60.;
-	const float AVOID_DIST = 45000000/65536.;
-	const int SIDERUN = 0x2800;
-	const int FORWARDRUN = 0x3200;
-	const float THINKDISTSQ = (50000.*50000./(65536.*65536.));
+	const SHOOTFOV = 60.;
+	const AVOID_DIST = 45000000/65536.;
+	const SIDERUN = 0x2800;
+	const FORWARDRUN = 0x3200;
+	const THINKDISTSQ = (50000.*50000./(65536.*65536.));
+
+
+	void Pitch (Actor target)
+	{
+		double aim;
+		double diff;
+
+		diff = target.pos.Z - player.mo.pos.Z;
+		aim = atan(diff / player.mo.Distance2D(target));
+		//player.cmd.pitch = aim; /*DAngle::fromRad(aim);*/
+		// [Kizoky] this seems to work just fine, although I'm not 100% sure yet
+		player.mo.pitch = -aim;
+		//player.mo.angle = player.mo.AngleTo(target);
+	}
 
 	bool sleft;
 	Vector3 old;
@@ -458,6 +515,8 @@ class ZSCajunBot : Bot
 
 	}
 
+	float NextAttack;
+	bool toggleattack;
 	override void Think()
 	{
 		botplayer = player; // [Kizoky] Some less confusing name for the Bot's Player info
@@ -470,18 +529,6 @@ class ZSCajunBot : Bot
 		{
 			// if (teamplay)
 			mate = Choose_Mate();
-
-			if (mate)
-				FollowActor(mate);
-
-			if (!mate)
-			{
-				Console.Printf("No mate!");
-			}
-			else
-			{
-				Console.Printf("Mate!");
-			}
 
 			double oldyaw = player.cmd.yaw;
 			double oldpitch = player.cmd.pitch;

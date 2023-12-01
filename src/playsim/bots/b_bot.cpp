@@ -62,13 +62,11 @@ IMPLEMENT_POINTERS_START(DBot)
 	IMPLEMENT_POINTER(missile)
 	IMPLEMENT_POINTER(mate)
 	IMPLEMENT_POINTER(last_mate)
-	IMPLEMENT_POINTER(player)	// [Kizoky] implement the player pointer
-	IMPLEMENT_POINTER(skill)	// [Kizoky] expose Bot skill
 IMPLEMENT_POINTERS_END
 
 DEFINE_FIELD(DBot, dest)
 DEFINE_FIELD(DBot, player)	// [Kizoky] implement the player pointer
-DEFINE_FIELD(DBot, skill)	// [Kizoky] expose Bot skill
+//DEFINE_FIELD(DBot, skill)	// [Kizoky] expose Bot skill || ERROR: (Internal = 16, External = 8)
 
 // TODO: Port these over to ZScript
 DEFINE_FIELD(DBot, prev)
@@ -189,20 +187,47 @@ DEFINE_ACTION_FUNCTION(DBot, Think)
 	return 0;
 }
 
+static BotInfoData* ZSGetBotInfo(AActor* weap)
+{
+	if (weap != nullptr)
+	{
+		BotInfoData botinfo = GetBotInfo(weap);
+		return &botinfo;
+	}
+
+	return nullptr;
+}
+
 // [Kizoky] Exposed the Bot info struct to ZScript
-DEFINE_ACTION_FUNCTION(DBot, GetBotInfo)
+DEFINE_ACTION_FUNCTION_NATIVE(DBot, GetBotInfo, ZSGetBotInfo)
+{
+	PARAM_PROLOGUE;
+	PARAM_POINTER(weap, AActor);
+	ACTION_RETURN_POINTER(ZSGetBotInfo(weap));
+}
+
+// [Kizoky] Exposed the Bot skill struct to ZScript
+DEFINE_ACTION_FUNCTION(DBot, GetBotSkill)
 {
 	PARAM_SELF_PROLOGUE(DBot);
-	PARAM_POINTER(weap, AActor);
 
-	BotInfoData* dummy = nullptr;
+	botskill_t* botskill;
+	botskill = &self->skill;
 
-	// TODO: Check if this is absolutely okay
-	auto k = BotInfo.CheckKey(weap->GetClass()->TypeName);
-	if (k)
-		ACTION_RETURN_POINTER(k);
+	ACTION_RETURN_POINTER(botskill);
+}
 
-	ACTION_RETURN_POINTER(dummy);
+DEFINE_ACTION_FUNCTION(DBot, BotButton)
+{
+	PARAM_SELF_PROLOGUE(DBot);
+	PARAM_INT(btn);
+
+	ticcmd_t* cmd = &netcmds[self->player - players][((gametic + 1) / ticdup) % BACKUPTICS];
+	memset(cmd, 0, sizeof(*cmd));
+
+	cmd->ucmd.buttons |= btn;
+
+	return 0;
 }
 
 CVAR (Int, bot_next_color, 11, 0)
