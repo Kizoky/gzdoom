@@ -53,27 +53,9 @@
 #include "g_levellocals.h"
 #include "d_main.h"
 
-IMPLEMENT_CLASS(DBot, false, true)
+IMPLEMENT_CLASS(DBot, false, false)
 
-IMPLEMENT_POINTERS_START(DBot)
-	IMPLEMENT_POINTER(dest)
-	IMPLEMENT_POINTER(prev)
-	IMPLEMENT_POINTER(enemy)
-	IMPLEMENT_POINTER(missile)
-	IMPLEMENT_POINTER(mate)
-	IMPLEMENT_POINTER(last_mate)
-IMPLEMENT_POINTERS_END
-
-DEFINE_FIELD(DBot, dest)
 DEFINE_FIELD(DBot, player)	// [Kizoky] implement the player pointer
-//DEFINE_FIELD(DBot, skill)	// [Kizoky] expose Bot skill || ERROR: (Internal = 16, External = 8)
-
-// TODO: Port these over to ZScript
-DEFINE_FIELD(DBot, prev)
-DEFINE_FIELD(DBot, enemy)
-DEFINE_FIELD(DBot, missile)
-DEFINE_FIELD(DBot, mate)
-DEFINE_FIELD(DBot, last_mate)
 
 // TODO: do we need this?
 DEFINE_FIELD_X(BotInfoData, BotInfoData, MoveCombatDist)
@@ -93,26 +75,7 @@ void DBot::Construct()
 void DBot::Clear ()
 {
 	player = nullptr;
-	Angle = nullAngle;
-	dest = nullptr;
-	prev = nullptr;
-	enemy = nullptr;
-	missile = nullptr;
-	mate = nullptr;
-	last_mate = nullptr;
 	memset(&skill, 0, sizeof(skill));
-	t_active = 0;
-	t_respawn = 0;
-	t_strafe = 0;
-	t_react = 0;
-	t_fight = 0;
-	t_roam = 0;
-	t_rocket = 0;
-	first_shot = true;
-	sleft = false;
-	allround = false;
-	increase = false;
-	old = { 0, 0 };
 }
 
 FSerializer &Serialize(FSerializer &arc, const char *key, botskill_t &skill, botskill_t *def)
@@ -133,36 +96,13 @@ void DBot::Serialize(FSerializer &arc)
 	Super::Serialize (arc);
 
 	arc("player", player)
-		("angle", Angle)
-		("dest", dest)
-		("prev", prev)
-		("enemy", enemy)
-		("missile", missile)
-		("mate", mate)
-		("lastmate", last_mate)
-		("skill", skill)
-		("active", t_active)
-		("respawn", t_respawn)
-		("strafe", t_strafe)
-		("react", t_react)
-		("fight", t_fight)
-		("roam", t_roam)
-		("rocket", t_rocket)
-		("firstshot", first_shot)
-		("sleft", sleft)
-		("allround", allround)
-		("increase", increase)
-		("old", old);
+		("skill", skill);
 }
 
+/*
 void DBot::Tick ()
 {
 	Super::Tick ();
-
-	if (player->mo == nullptr || Level->isFrozen())
-	{
-		return;
-	}
 
 	BotThinkCycles.Clock();
 	Level->BotInfo.m_Thinking = true;
@@ -178,12 +118,40 @@ void DBot::Tick ()
 	Level->BotInfo.m_Thinking = false;
 	BotThinkCycles.Unclock();
 }
+*/
 
-// [Kizoky] Exposed Think to ZScript
-DEFINE_ACTION_FUNCTION(DBot, Think)
+// [Kizoky] This calls just before PlayerPawn's PlayerThink
+void DBot::BotThink()
+{
+	// empty
+}
+
+void DBot::CallBotThink()
+{
+	BotThinkCycles.Clock();
+	Level->BotInfo.m_Thinking = true;
+
+	IFVIRTUAL(DBot, BotThink)
+	{
+		// Without the type cast this picks the 'void *' assignment...
+		VMValue params[1] = { (DBot*)this };
+		VMCall(func, params, 1, nullptr, 0);
+	}
+
+	Level->BotInfo.m_Thinking = false;
+	BotThinkCycles.Unclock();
+}
+
+void BotThink(DBot* bot)
+{
+	bot->CallBotThink();
+}
+
+// [Kizoky] This calls just before PlayerPawn's PlayerThink
+DEFINE_ACTION_FUNCTION(DBot, BotThink)
 {
 	PARAM_SELF_PROLOGUE(DBot);
-	self->Think();
+	self->BotThink();
 	return 0;
 }
 
@@ -217,23 +185,10 @@ DEFINE_ACTION_FUNCTION(DBot, GetBotSkill)
 	ACTION_RETURN_POINTER(botskill);
 }
 
-DEFINE_ACTION_FUNCTION(DBot, BotButton)
-{
-	PARAM_SELF_PROLOGUE(DBot);
-	PARAM_INT(btn);
-
-	ticcmd_t* cmd = &netcmds[self->player - players][((gametic + 1) / ticdup) % BACKUPTICS];
-	memset(cmd, 0, sizeof(*cmd));
-
-	cmd->ucmd.buttons |= btn;
-
-	return 0;
-}
-
 CVAR (Int, bot_next_color, 11, 0)
 
 // [Kizoky] the default ZScript class of the Bots
-CVAR (String, botclass, "ZSCajunBot", 0)
+CVAR (String, botclass, "ZSBot", 0)
 
 CCMD (addbot)
 {

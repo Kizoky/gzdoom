@@ -53,6 +53,7 @@
 #include "p_checkposition.h"
 #include "actorinlines.h"
 
+/*
 static FRandom pr_botopendoor ("BotOpenDoor");
 static FRandom pr_bottrywalk ("BotTryWalk");
 static FRandom pr_botnewchasedir ("BotNewChaseDir");
@@ -388,3 +389,4 @@ bool FCajunMaster::IsDangerous (sector_t *sec)
 {
 	return sec->damageamount > 0;
 }
+*/

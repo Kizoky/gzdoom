@@ -128,15 +128,15 @@ public:
 	//(b_func.cpp)
 	void StartTravel ();
 	void FinishTravel ();
-	bool IsLeader (player_t *player);
-	void SetBodyAt (FLevelLocals *Level, const DVector3 &pos, int hostnum);
-	double FakeFire (AActor *source, AActor *dest, ticcmd_t *cmd);
-	bool SafeCheckPosition (AActor *actor, double x, double y, FCheckPosition &tm);
-	void BotTick(AActor *mo);
+	//bool IsLeader (player_t *player);
+	//void SetBodyAt (FLevelLocals *Level, const DVector3 &pos, int hostnum);
+	//double FakeFire (AActor *source, AActor *dest, ticcmd_t *cmd);
+	//bool SafeCheckPosition (AActor *actor, double x, double y, FCheckPosition &tm);
+	//void BotTick(AActor *mo);
 
 	//(b_move.cpp)
-	bool CleanAhead (AActor *thing, double x, double y, ticcmd_t *cmd);
-	bool IsDangerous (sector_t *sec);
+	//bool CleanAhead (AActor *thing, double x, double y, ticcmd_t *cmd);
+	//bool IsDangerous (sector_t *sec);
 
 	TArray<FString> getspawned; //Array of bots (their names) which should be spawned when starting a game.
 	
@@ -146,9 +146,9 @@ public:
 	botinfo_t *botinfo;
 	int spawn_tries;
 	int wanted_botnum;
-	TObjPtr<AActor*> firstthing;
-	TObjPtr<AActor*>	body1;
-	TObjPtr<AActor*> body2;
+	//TObjPtr<AActor*> firstthing;
+	//TObjPtr<AActor*>	body1;
+	//TObjPtr<AActor*> body2;
 
 	bool	 m_Thinking;
 
@@ -164,30 +164,30 @@ protected:
 class DBot : public DThinker
 {
 	DECLARE_CLASS(DBot,DThinker)
-	HAS_OBJECT_POINTERS
+	//HAS_OBJECT_POINTERS
 public:
 	static const int DEFAULT_STAT = STAT_BOT;
 	void Construct ();
 
 	void Clear ();
 	void Serialize(FSerializer &arc);
-	void Tick ();
+	//void Tick ();
 
 	//(b_think.cpp)
-	void WhatToGet (AActor *item);
+	//void WhatToGet (AActor *item);
 
 	//(b_func.cpp)
-	bool Check_LOS (AActor *to, DAngle vangle);
+	//bool Check_LOS (AActor *to, DAngle vangle);
 
 	player_t	*player;
-	DAngle		Angle;		// The wanted angle that the bot try to get every tic.
+	//DAngle		Angle;		// The wanted angle that the bot try to get every tic.
 							//  (used to get a smooth view movement)
-	TObjPtr<AActor*>		dest;		// Move Destination.
-	TObjPtr<AActor*>		prev;		// Previous move destination.
-	TObjPtr<AActor*>		enemy;		// The dead meat.
-	TObjPtr<AActor*>		missile;	// A threatening missile that needs to be avoided.
-	TObjPtr<AActor*>		mate;		// Friend (used for grouping in teamplay or coop).
-	TObjPtr<AActor*>		last_mate;	// If bots mate disappeared (not if died) that mate is
+	//TObjPtr<AActor*>		dest;		// Move Destination.
+	//TObjPtr<AActor*>		prev;		// Previous move destination.
+	//TObjPtr<AActor*>		enemy;		// The dead meat.
+	//TObjPtr<AActor*>		missile;	// A threatening missile that needs to be avoided.
+	//TObjPtr<AActor*>		mate;		// Friend (used for grouping in teamplay or coop).
+	//TObjPtr<AActor*>		last_mate;	// If bots mate disappeared (not if died) that mate is
 							// pointed to by this. Allows bot to roam to it if
 							// necessary.
 
@@ -195,46 +195,49 @@ public:
 	struct botskill_t	skill;
 
 	//Tickers
-	int			t_active;	// Open door, lower lift stuff, door must open and
+	//int			t_active;	// Open door, lower lift stuff, door must open and
 							// lift must go down before bot does anything
 							// radical like try a stuckmove
-	int			t_respawn;
-	int			t_strafe;
-	int			t_react;
-	int			t_fight;
-	int			t_roam;
-	int			t_rocket;
+	//int			t_respawn;
+	//int			t_strafe;
+	//int			t_react;
+	//int			t_fight;
+	//int			t_roam;
+	//int			t_rocket;
 
 	//Misc booleans
-	bool		first_shot;	// Used for reaction skill.
-	bool		sleft;		// If false, strafe is right.
-	bool		allround;
-	bool		increase;
+	//bool		first_shot;	// Used for reaction skill.
+	//bool		sleft;		// If false, strafe is right.
+	//bool		allround;
+	//bool		increase;
 
-	DVector2	old;
+	//DVector2	old;
 
 	//(b_think.cpp)
 	virtual void Think(); // [Kizoky] Exposed Think to ZScript
+	void CallBotThink();
+	virtual void BotThink(); // [Kizoky] another Think function that calls just before PlayerThink
 private:
-	void ThinkForMove (ticcmd_t *cmd);
-	void Set_enemy ();
-
-	//(b_func.cpp)
-	bool Reachable (AActor *target);
-	void Dofire (ticcmd_t *cmd);
-	AActor *Choose_Mate ();
-	AActor *Find_enemy ();
-	DAngle FireRox (AActor *enemy, ticcmd_t *cmd);
-
-	//(b_move.cpp)
-	void Roam (ticcmd_t *cmd);
-	bool Move (ticcmd_t *cmd);
-	bool TryWalk (ticcmd_t *cmd);
-	void NewChaseDir (ticcmd_t *cmd);
-	void TurnToAng ();
-	void Pitch (AActor *target);
+	//void ThinkForMove (ticcmd_t *cmd);
+	//void Set_enemy ();
+	//
+	////(b_func.cpp)
+	//bool Reachable (AActor *target);
+	//void Dofire (ticcmd_t *cmd);
+	//AActor *Choose_Mate ();
+	//AActor *Find_enemy ();
+	//DAngle FireRox (AActor *enemy, ticcmd_t *cmd);
+	//
+	////(b_move.cpp)
+	//void Roam (ticcmd_t *cmd);
+	//bool Move (ticcmd_t *cmd);
+	//bool TryWalk (ticcmd_t *cmd);
+	//void NewChaseDir (ticcmd_t *cmd);
+	//void TurnToAng ();
+	//void Pitch (AActor *target);
 };
 
+void BotThink(DBot* bot); // [Kizoky] not sure if this is okay
 
 //Externs
 extern cycle_t BotThinkCycles, BotSupportCycles;

@@ -2269,9 +2269,9 @@ void FLevelLocals::Mark()
 	GC::Mark(automap);
 	GC::Mark(interpolator.Head);
 	GC::Mark(SequenceListHead);
-	GC::Mark(BotInfo.firstthing);
-	GC::Mark(BotInfo.body1);
-	GC::Mark(BotInfo.body2);
+	//GC::Mark(BotInfo.firstthing);
+	//GC::Mark(BotInfo.body1);
+	//GC::Mark(BotInfo.body2);
 	if (localEventManager)
 	{
 		GC::Mark(localEventManager->FirstEventHandler);

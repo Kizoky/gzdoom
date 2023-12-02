@@ -39,33 +39,47 @@ struct BotSkillData native
 	native int isp;        //Instincts of Self Preservation. Personality
 }
 
+// TODO: do we need this?
+enum dirtype_t
+{
+	DI_EAST,
+	DI_NORTHEAST,
+	DI_NORTH,
+	DI_NORTHWEST,
+	DI_WEST,
+	DI_SOUTHWEST,
+	DI_SOUTH,
+	DI_SOUTHEAST,
+	DI_NODIR,
+	NUMDIRS
+}
+
 class Bot native
 {
 	native PlayerInfo player;
 
-	// ---------- TODO: Port these over to ZScript, and remove them from C++
-	native Actor dest;
-	native Actor prev;
-	native Actor enemy;
-	native Actor missile;
-	native Actor mate;
-	native Actor last_mate;
-	// ----------
-
-	const BIF_BOT_REACTION_SKILL_THING = 1;
-	const BIF_BOT_EXPLOSIVE = 2;
-	const BIF_BOT_BFG = 4;
 	native static BotInfoData GetBotInfo(Actor weap);
 	native BotSkillData GetBotSkill();
 
-	native void BotButton(int btn);
-
-	virtual native void Think();
+	virtual native void BotThink();
 }
 
 // [Kizoky] Ported ZCajun AI
 class ZSCajunBot : Bot
 {
+	// ---------- [Kizoky] These were the original pointers in C++
+	Actor dest;
+	Actor prev;
+	Actor enemy;
+	Actor missile;
+	Actor mate;
+	Actor last_mate;
+	// ----------
+
+	const BIF_BOT_REACTION_SKILL_THING = 1;
+	const BIF_BOT_EXPLOSIVE = 2;
+	const BIF_BOT_BFG = 4;
+
 	Actor botself;
 	PlayerInfo botplayer;
 
@@ -440,7 +454,7 @@ class ZSCajunBot : Bot
 		}
 		if (!no_fire) //If going to fire weapon
 		{
-			botplayer.cmd.buttons |= BT_ATTACK;
+			player.cmd.buttons |= BT_ATTACK;
 		}
 		//Prevents bot from jerking, when firing automatic things with low skill.
 	}
@@ -464,6 +478,92 @@ class ZSCajunBot : Bot
 		// [Kizoky] this seems to work just fine, although I'm not 100% sure yet
 		player.mo.pitch = -aim;
 		//player.mo.angle = player.mo.AngleTo(target);
+	}
+
+	bool Move ()
+	{
+		double tryx, tryy;
+		bool try_ok;
+		int good;
+	
+		if (player.mo.movedir >= DI_NODIR)
+		{
+			player.mo.movedir = DI_NODIR;	// make sure it's valid.
+			return false;
+		}
+		
+		/*
+		tryx = player.mo.X() + 8*xspeed[player.mo.movedir];
+		tryy = player.mo.Y() + 8*yspeed[player.mo.movedir];
+	
+		try_ok = Level->BotInfo.CleanAhead (player->mo, tryx, tryy, cmd);
+	
+		if (!try_ok) //Anything blocking that could be opened etc..
+		{
+			if (!spechit.Size ())
+				return false;
+	
+			player->mo->movedir = DI_NODIR;
+	
+			good = 0;
+			spechit_t spechit1;
+			line_t *ld;
+	
+			while (spechit.Pop (spechit1))
+			{
+				ld = spechit1.line;
+				bool tryit = true;
+	
+				if (ld->special == Door_LockedRaise && !P_CheckKeys (player->mo, ld->args[3], false))
+					tryit = false;
+				else if (ld->special == Generic_Door && !P_CheckKeys (player->mo, ld->args[4], false))
+					tryit = false;
+	
+				if (tryit &&
+					(P_TestActivateLine (ld, player->mo, 0, SPAC_Use) ||
+					 P_TestActivateLine (ld, player->mo, 0, SPAC_Push)))
+				{
+					good |= ld == player->mo->BlockingLine ? 1 : 2;
+				}
+			}
+			if (good && ((pr_botopendoor() >= 203) ^ (good & 1)))
+			{
+				cmd->ucmd.buttons |= BT_USE;
+				cmd->ucmd.forwardmove = FORWARDRUN;
+				return true;
+			}
+			else
+				return false;
+		}
+		else //Move forward.
+			cmd->ucmd.forwardmove = FORWARDRUN;
+		*/
+
+		return true;
+	}
+
+	void Roam()
+	{
+		//if (Reachable(dest))
+		{ // Straight towards it.
+			player.mo.Angle = player.mo.AngleTo(dest);
+		}
+		/*else*/ if (player.mo.movedir < 8) // turn towards movement direction if not there yet
+		{
+			// no point doing this with floating point angles...
+			int delta = player.mo.angle - (player.mo.movedir << 29);
+
+			if (delta > 0)
+				player.mo.Angle -= 45;
+			else if (delta < 0)
+				player.mo.Angle += 45;
+		}
+
+		// chase towards destination.
+		if (--player.mo.movecount < 0 || !Move ())
+		{
+			//NewChaseDir (cmd);
+		}
 	}
 
 	bool sleft;
@@ -498,8 +598,8 @@ class ZSCajunBot : Bot
 		{
 			Pitch (missile);
 			botself.Angle = botself.AngleTo(missile);
-			botplayer.cmd.sidemove = sleft ? -SIDERUN : SIDERUN;
-			botplayer.cmd.forwardmove = -FORWARDRUN; //Back IS best.
+			player.cmd.sidemove = sleft ? -SIDERUN : SIDERUN;
+			player.cmd.forwardmove = -FORWARDRUN; //Back IS best.
 
 			if ((botself.pos - old).LengthSquared() < THINKDISTSQ
 				&& t_strafe<=0)
@@ -512,13 +612,32 @@ class ZSCajunBot : Bot
 			if (enemy && Check_LOS (enemy, BAM(SHOOTFOV)))
 				Dofire(); //Order bot to fire current weapon
 		}
+		else if (enemy && player.mo.CheckSight (enemy, 0)) //Fight!
+		{
+			Pitch (enemy);
+
+			if (dest && dest.bSPECIAL)
+			{
+				if (player.health < GetBotSkill().isp)
+				{
+					
+					return;
+				}
+			}
+		}
 
 	}
 
 	float NextAttack;
 	bool toggleattack;
-	override void Think()
+	override void BotThink()
 	{
+		if (player.mo == null || Level.IsFrozen())
+		{
+			return;
+		}
+
+		// TODO: don't use these
 		botplayer = player; // [Kizoky] Some less confusing name for the Bot's Player info
 		botself = player.mo; // [Kizoky] Access to the PlayerPawn
 
@@ -537,5 +656,88 @@ class ZSCajunBot : Bot
 		}
 
 		//Console.Printf("Overridden");
+	}
+}
+
+// [Kizoky] non-ZCajun AI (test, shouldn't be in release)
+class ZSBot : Bot
+{
+	Actor botself;
+	PlayerInfo botplayer;
+
+	//Actor target;
+
+	int Test;
+	bool sw;
+
+	void Pitch (Actor target)
+	{
+		double aim;
+		double diff;
+
+		diff = target.pos.Z - player.mo.pos.Z;
+		aim = atan(diff / player.mo.Distance2D(target));
+		player.mo.pitch = -aim;
+		player.mo.angle = player.mo.AngleTo(target);
+	}
+
+	int DeathRespawnTimer;
+	bool Respawn;
+	void HandleRespawn()
+	{
+		if (player.mo.health > 0)
+			return;
+
+		if (!Respawn)
+		{
+			Respawn = true;
+			DeathRespawnTimer = level.time + 35 * random[zsbot_respawn](3,6);
+		}
+		else if (Respawn && level.time > DeathRespawnTimer)
+		{
+			Respawn = false;
+			player.cmd.buttons |= BT_USE;
+		}
+	}
+
+	override void BotThink()
+	{
+		if (player.mo == null || Level.IsFrozen())
+		{
+			return;
+		}
+
+		HandleRespawn();
+
+		if (level.time > Test)
+		{
+			if (sw)
+			{
+				Test = level.time + 35 * 4;
+				sw = false;
+				Console.Printf("Rest %d", Test);
+			}
+			else
+			{
+				Test = level.time + 35 * 4;
+				sw = true;
+				Console.Printf("Attacking");
+			}
+		}
+
+		if (sw)
+		{
+			player.cmd.buttons |= BT_ATTACK;
+
+			if (!player.mo.target || (player.mo.target && player.mo.target.health <= 0))
+			{
+				player.mo.target = player.mo.RoughMonsterSearch (20);
+			}
+
+			if (player.mo.target)
+			{
+				Pitch (player.mo.target);
+			}
+		}
 	}
 }

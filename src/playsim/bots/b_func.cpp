@@ -54,6 +54,7 @@
 #include "p_checkposition.h"
 #include "actorinlines.h"
 
+/*
 static FRandom pr_botdofire ("BotDoFire");
 
 
@@ -158,12 +159,15 @@ bool DBot::Check_LOS (AActor *to, DAngle vangle)
 
 	return absangle(player->mo->AngleTo(to), player->mo->Angles.Yaw) <= (vangle/2);
 }
+*/
+
 
 //-------------------------------------
 //Bot_Dofire()
 //-------------------------------------
 //The bot will check if it's time to fire
 //and do so if that is the case.
+/*
 void DBot::Dofire (ticcmd_t *cmd)
 {
 	bool no_fire; //used to prevent bot from pumping rockets into nearby walls.
@@ -247,7 +251,7 @@ void DBot::Dofire (ticcmd_t *cmd)
 		aiming_penalty = 0;
 		if (enemy->flags & MF_SHADOW)
 			aiming_penalty += (pr_botdofire()%25)+10;
-		if (enemy->Sector->lightlevel<WHATS_DARK/* && !(player->powers & PW_INFRARED)*/)
+		if (enemy->Sector->lightlevel<WHATS_DARK && !(player->powers & PW_INFRARED))
 			aiming_penalty += pr_botdofire()%40;//Dark
 		if (player->damagecount)
 			aiming_penalty += player->damagecount; //Blood in face makes it hard to aim
@@ -391,23 +395,7 @@ AActor *DBot::Choose_Mate ()
 		}
 	}
 
-/*
-	//Make a introducing to mate.
-	if(target && target!=last_mate)
-	{
-		if((P_Random()%(200*Level->BotInfo.botnum))<3)
-		{
-			chat = c_teamup;
-			if(target->bot)
-					strcpy(c_target, botsingame[target->bot_id]);
-						else if(target->player)
-					strcpy(c_target, player_names[target->play_id]);
-		}
-	}
-*/
-
 	return target;
-
 }
 
 //MAKEME: Make this a smart decision
@@ -448,8 +436,8 @@ AActor *DBot::Find_enemy ()
 
 				//Too dark?
 				if (temp > DARK_DIST &&
-					client->mo->Sector->lightlevel < WHATS_DARK /*&&
-					player->Powers & PW_INFRARED*/)
+					client->mo->Sector->lightlevel < WHATS_DARK &&
+					player->Powers & PW_INFRARED)
 					continue;
 
 				if (temp < closest_dist)
@@ -577,6 +565,7 @@ bool FCajunMaster::SafeCheckPosition (AActor *actor, double x, double y, FCheckP
 	actor->flags = savedFlags;
 	return res;
 }
+*/
 
 void FCajunMaster::StartTravel ()
 {

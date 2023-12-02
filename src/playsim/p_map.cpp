@@ -2462,6 +2462,7 @@ bool P_TryMove(AActor *thing, const DVector2 &pos,
 		}
 
 		//Added by MC: To prevent bot from getting into dangerous sectors.
+		/*
 		if (thing->player && thing->player->Bot != NULL && thing->flags & MF_SHOOTABLE)
 		{
 			if (tm.sector != thing->Sector
@@ -2475,6 +2476,7 @@ bool P_TryMove(AActor *thing, const DVector2 &pos,
 				return false;
 			}
 		}
+		*/
 	}
 
 	// [RH] Check status of eyes against fake floor/ceiling in case

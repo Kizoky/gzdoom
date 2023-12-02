@@ -1269,6 +1269,12 @@ void P_PlayerThink (player_t *player)
 	player->cheats &= ~CF_NOFOVINTERP;
 	player->mo->FloatVar("prevBob") = player->bob;
 
+	// [Kizoky] call the BotThink function of the bots
+	if (player->Bot != nullptr)
+	{
+		BotThink(player->Bot);
+	}
+
 	IFVIRTUALPTRNAME(player->mo, NAME_PlayerPawn, PlayerThink)
 	{
 		VMValue param = player->mo;

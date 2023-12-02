@@ -103,11 +103,13 @@ void P_TouchSpecialThing (AActor *special, AActor *toucher)
 		return;
 
 	//Added by MC: Finished with this destination.
+	/*
 	if (toucher->player != NULL && toucher->player->Bot != NULL && special == toucher->player->Bot->dest)
 	{
 		toucher->player->Bot->prev = toucher->player->Bot->dest;
 		toucher->player->Bot->dest = nullptr;
 	}
+	*/
 	special->CallTouch (toucher);
 }
 
@@ -596,6 +598,7 @@ void AActor::Die (AActor *source, AActor *inflictor, int dmgflags, FName MeansOf
 		player->respawn_time = Level->time + TICRATE;
 
 		//Added by MC: Respawn bots
+		/*
 		if (Level->BotInfo.botnum && !demoplayback)
 		{
 			if (player->Bot != NULL)
@@ -616,6 +619,7 @@ void AActor::Die (AActor *source, AActor *inflictor, int dmgflags, FName MeansOf
 			player->spreecount = 0;
 			player->multicount = 0;
 		}
+		*/
 
 		// count environment kills against you
 		if (!source)
@@ -1286,10 +1290,12 @@ static int DamageMobj (AActor *target, AActor *inflictor, AActor *source, int da
 			flags &= ~DMG_FORCED;
 		}
 		//Added by MC: Lets bots look allround for enemies if they survive an ambush.
+		/*
 		if (player->Bot != NULL)
 		{
 			player->Bot->allround = true;
 		}
+		*/
 
 		// end of game hell hack
 		if ((target->Sector->Flags & SECF_ENDLEVEL) && damage >= target->health)

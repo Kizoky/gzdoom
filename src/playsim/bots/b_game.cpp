@@ -157,10 +157,10 @@ void FCajunMaster::Main(FLevelLocals *Level)
 void FCajunMaster::Init ()
 {
 	botnum = 0;
-	firstthing = nullptr;
+	//firstthing = nullptr;
 	spawn_tries = 0;
-	body1 = nullptr;
-	body2 = nullptr;
+	//body1 = nullptr;
+	//body2 = nullptr;
 
 	if (ctf && teamplay == false)
 		teamplay = true; //Need teamplay for ctf. (which is not done yet)
